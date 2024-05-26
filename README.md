@@ -12,7 +12,6 @@ Together, these modules enable the training, prediction, and evaluation of decis
 
 + impurity\_calculators.py
    + Contains various methods for calculating the impurity of decision tree nodes, such as Gini impurity and Entropy. These methods are used to evaluate the quality of different split points to select the optimal split point.
-   + 
 + tree\_based.py
    + Implementation of decision trees and random forests.
 
