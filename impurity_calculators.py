@@ -1,4 +1,4 @@
-from pyspark.sql.functions import when, col, sum as sql_sum
+from pyspark.sql.functions import when, col, sum as sql_sum, avg
 import numpy as np
 
 class Split:
@@ -29,6 +29,17 @@ class ImpurityCalculator:
         total = sum(label_counts)
         probabilities = [count / total for count in label_counts if count > 0]
         return -sum(p * np.log2(p) for p in probabilities)
+
+    def calculate_centroid(self, subset, feature_type='multi_class'):
+        if feature_type == 'multi_class':
+            return self.calculate_entropy(subset)
+        elif feature_type == 'binary_class':
+            return subset.filter(col(self.label_col) == 1).count()
+        elif feature_type == 'regression':
+            return subset.select(avg(self.label_col)).first()[0]
+        else:
+            raise ValueError("Unsupported feature type: choose 'multi_class', 'binary_class', or 'regression'")
+
 
     def split_data(self, value, feature_type='continuous'):
         """
@@ -65,6 +76,7 @@ class ImpurityCalculator:
                                    categories=threshold if feature_type == 'unordered' else None)
 
         return best_split
+
 
     def apply_split(self, split):
         """
@@ -157,7 +169,16 @@ class ImpurityCalculator:
         intrinsic_value = -left_prob * np.log2(left_prob) - right_prob * np.log2(right_prob)
         return ig / intrinsic_value if intrinsic_value != 0 else 0
 
-
+    def order_bins_by_centroid(self, feature_bins, feature_type):
+        """
+        Order feature bins based on centroid for given feature type.
+        :param feature_bins: List of bins or splits for the feature.
+        :param feature_type: Type of the feature ('multi_class', 'binary_class', 'regression').
+        :return: Ordered feature bins.
+        """
+        centroids = [(bin_val, self.calculate_centroid(self.data.filter(col(self.feature) == bin_val), feature_type)) for bin_val in feature_bins]
+        ordered_bins = [bin_val for bin_val, centroid in sorted(centroids, key=lambda x: x[1])]
+        return ordered_bins
 
 
 
